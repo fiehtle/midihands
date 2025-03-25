@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import sys
 from camera_utils import get_builtin_camera
 
 class HandGestureDetector:
@@ -110,34 +111,40 @@ class HandGestureDetector:
         return frame
 
 def main():
-    # Initialize built-in webcam
+    print("Initializing camera...")
     cap = get_builtin_camera()
     if cap is None:
-        print("Error: Could not initialize built-in camera")
-        return
-        
+        print("Error: Could not initialize built-in camera. Please ensure no other application is using it.")
+        sys.exit(1)
+    
+    print("Camera initialized successfully. Starting hand detection...")
     detector = HandGestureDetector()
     
-    while True:
-        # Read frame from webcam
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame")
-            break
+    try:
+        while True:
+            # Read frame from webcam
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame")
+                break
+                
+            # Process frame
+            processed_frame = detector.process_frame(frame)
             
-        # Process frame
-        processed_frame = detector.process_frame(frame)
-        
-        # Display the frame
-        cv2.imshow('Hand Gesture Detection - C Major Scale', processed_frame)
-        
-        # Break loop on 'q' press
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    # Clean up
-    cap.release()
-    cv2.destroyAllWindows()
+            # Display the frame
+            cv2.imshow('Hand Gesture Detection - C Major Scale', processed_frame)
+            
+            # Break loop on 'q' press
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    except KeyboardInterrupt:
+        print("\nProgram interrupted by user")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        print("Cleaning up...")
+        cap.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main() 
