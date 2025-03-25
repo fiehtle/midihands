@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+from camera_utils import get_builtin_camera
 
 class HandGestureDetector:
     def __init__(self):
@@ -109,8 +110,12 @@ class HandGestureDetector:
         return frame
 
 def main():
-    # Initialize webcam
-    cap = cv2.VideoCapture(0)
+    # Initialize built-in webcam
+    cap = get_builtin_camera()
+    if cap is None:
+        print("Error: Could not initialize built-in camera")
+        return
+        
     detector = HandGestureDetector()
     
     while True:
