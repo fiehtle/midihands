@@ -24,22 +24,67 @@ class HandGestureDetector:
             5: ("II", "Dm")
         }
         
-    def count_fingers(self, hand_landmarks):
-        """Count number of extended fingers"""
-        finger_tips = [8, 12, 16, 20]  # Index, middle, ring, pinky tip indices
-        thumb_tip = 4
-        finger_count = 0
+        # Define finger indices
+        self.finger_indices = {
+            'thumb': 4,
+            'index': 8,
+            'middle': 12,
+            'ring': 16,
+            'pinky': 20
+        }
+    
+    def is_finger_extended(self, hand_landmarks, finger_tip_idx, threshold=0.1):
+        """
+        Check if a finger is extended by comparing it with its neighbors and base joints.
+        Uses relative positions to handle different hand orientations.
+        """
+        # Get the base, middle, and tip of the finger
+        base = finger_tip_idx - 3
+        middle = finger_tip_idx - 2
+        tip = finger_tip_idx
         
-        # Check thumb
-        if hand_landmarks.landmark[thumb_tip].x < hand_landmarks.landmark[thumb_tip - 1].x:
-            finger_count += 1
+        # Get the landmarks
+        base_point = hand_landmarks.landmark[base]
+        middle_point = hand_landmarks.landmark[middle]
+        tip_point = hand_landmarks.landmark[tip]
+        
+        # For thumb, check the angle with index finger base
+        if finger_tip_idx == self.finger_indices['thumb']:
+            index_base = hand_landmarks.landmark[5]  # Index finger base
+            # Check if thumb is more to the side than the index base
+            return tip_point.x < index_base.x
+        
+        # For other fingers, check if tip is higher than middle joint
+        # and maintain a minimum distance to consider it "extended"
+        vertical_distance = middle_point.y - tip_point.y
+        return vertical_distance > threshold
+        
+    def interpret_counting_gesture(self, hand_landmarks):
+        """
+        Interpret the hand gesture as a counting number based on cultural finger counting patterns.
+        Returns a number 1-5 based on the gesture.
+        """
+        # Check each finger's state
+        is_thumb_up = self.is_finger_extended(hand_landmarks, self.finger_indices['thumb'])
+        is_index_up = self.is_finger_extended(hand_landmarks, self.finger_indices['index'])
+        is_middle_up = self.is_finger_extended(hand_landmarks, self.finger_indices['middle'])
+        is_ring_up = self.is_finger_extended(hand_landmarks, self.finger_indices['ring'])
+        is_pinky_up = self.is_finger_extended(hand_landmarks, self.finger_indices['pinky'])
+        
+        # Pattern matching for numbers 1-5
+        if is_index_up and not (is_middle_up or is_ring_up or is_pinky_up or is_thumb_up):
+            return 1  # Index only
+        elif is_index_up and is_middle_up and not (is_ring_up or is_pinky_up or is_thumb_up):
+            return 2  # Peace sign
+        elif is_index_up and is_middle_up and is_ring_up and not (is_pinky_up or is_thumb_up):
+            return 3  # First three fingers
+        elif is_index_up and is_middle_up and is_ring_up and is_pinky_up and not is_thumb_up:
+            return 4  # All fingers except thumb
+        elif is_index_up and is_middle_up and is_ring_up and is_pinky_up and is_thumb_up:
+            return 5  # All fingers
             
-        # Check other fingers
-        for tip in finger_tips:
-            if hand_landmarks.landmark[tip].y < hand_landmarks.landmark[tip - 2].y:
-                finger_count += 1
-                
-        return finger_count
+        # If no recognized pattern is found, return 0
+        return 0
 
     def process_frame(self, frame):
         # Convert BGR to RGB
@@ -63,21 +108,22 @@ class HandGestureDetector:
                         self.mp_hands.HAND_CONNECTIONS
                     )
                     
-                    # Count fingers for left hand
-                    finger_count = self.count_fingers(hand_landmarks)
+                    # Interpret the counting gesture
+                    count = self.interpret_counting_gesture(hand_landmarks)
                     
-                    # Get chord information
-                    chord_info = self.chord_mappings.get(finger_count, (None, None))
-                    left_hand_info = (finger_count, chord_info)
+                    # Get chord information if we have a valid count
+                    if count > 0:
+                        chord_info = self.chord_mappings.get(count, (None, None))
+                        left_hand_info = (count, chord_info)
         
         # Display information on frame
         if left_hand_info:
-            finger_count, (roman_numeral, chord_name) = left_hand_info
+            count, (roman_numeral, chord_name) = left_hand_info
             
             # Display finger count
             cv2.putText(
                 frame,
-                f'Fingers: {finger_count}',
+                f'Count: {count}',
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
