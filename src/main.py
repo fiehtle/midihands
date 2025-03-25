@@ -13,6 +13,15 @@ class HandGestureDetector:
         )
         self.mp_draw = mp.solutions.drawing_utils
         
+        # Define chord mappings for C Major
+        self.chord_mappings = {
+            1: ("I", "C"),
+            2: ("IV", "F"),
+            3: ("V", "G"),
+            4: ("VI", "Am"),
+            5: ("II", "Dm")
+        }
+        
     def count_fingers(self, hand_landmarks):
         """Count number of extended fingers"""
         finger_tips = [8, 12, 16, 20]  # Index, middle, ring, pinky tip indices
@@ -37,29 +46,65 @@ class HandGestureDetector:
         # Process the frame and detect hands
         results = self.hands.process(rgb_frame)
         
+        # Initialize variables for left hand information
+        left_hand_info = None
+        
         # Draw hand landmarks if detected
         if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                # Draw landmarks
-                self.mp_draw.draw_landmarks(
-                    frame, 
-                    hand_landmarks, 
-                    self.mp_hands.HAND_CONNECTIONS
-                )
-                
-                # Count fingers
-                finger_count = self.count_fingers(hand_landmarks)
-                
-                # Display finger count
+            for idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
+                # Determine if this is the left hand
+                if results.multi_handedness[idx].classification[0].label == "Left":
+                    # Draw landmarks
+                    self.mp_draw.draw_landmarks(
+                        frame, 
+                        hand_landmarks, 
+                        self.mp_hands.HAND_CONNECTIONS
+                    )
+                    
+                    # Count fingers for left hand
+                    finger_count = self.count_fingers(hand_landmarks)
+                    
+                    # Get chord information
+                    chord_info = self.chord_mappings.get(finger_count, (None, None))
+                    left_hand_info = (finger_count, chord_info)
+        
+        # Display information on frame
+        if left_hand_info:
+            finger_count, (roman_numeral, chord_name) = left_hand_info
+            
+            # Display finger count
+            cv2.putText(
+                frame,
+                f'Fingers: {finger_count}',
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2
+            )
+            
+            # Display chord information
+            if roman_numeral and chord_name:
                 cv2.putText(
                     frame,
-                    f'Fingers: {finger_count}',
-                    (10, 30),
+                    f'Chord: {roman_numeral} ({chord_name})',
+                    (10, 70),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
                     (0, 255, 0),
                     2
                 )
+        else:
+            # Display "No Left Hand" message
+            cv2.putText(
+                frame,
+                "No Left Hand Detected",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2
+            )
                 
         return frame
 
@@ -79,7 +124,7 @@ def main():
         processed_frame = detector.process_frame(frame)
         
         # Display the frame
-        cv2.imshow('Hand Gesture Detection', processed_frame)
+        cv2.imshow('Hand Gesture Detection - C Major Scale', processed_frame)
         
         # Break loop on 'q' press
         if cv2.waitKey(1) & 0xFF == ord('q'):
