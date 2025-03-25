@@ -1,5 +1,7 @@
 # Hand Gesture to MIDI Control
 
+![Project Status: Active](https://img.shields.io/badge/Project%20Status-Active-green)
+
 This project uses computer vision to detect hand gestures and convert them into MIDI commands for controlling Logic Pro.
 
 ## Setup
@@ -39,4 +41,12 @@ python src/main.py
 
 - Python 3.9+
 - macOS with webcam
-- Logic Pro (or other DAW that accepts MIDI input) 
+- Logic Pro (or other DAW that accepts MIDI input)
+
+## Development Status
+
+Currently implementing:
+- [x] Hand detection and finger counting
+- [ ] MIDI output integration
+- [ ] Gesture-to-MIDI mapping
+- [ ] Performance optimization 
